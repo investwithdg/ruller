@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { PRICING } from '@/lib/config';
-import { calculatePrice } from '@/lib/pricing';
+import { calculatePrice, PRICING } from '@/lib/pricing';
 import { Autocomplete } from '@react-google-maps/api';
 import { useGoogleMaps } from '@/app/contexts/GoogleMaps';
 import { calculateDistanceClient } from '@/lib/google-maps/distance';
