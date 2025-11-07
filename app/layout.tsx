@@ -2,11 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import Link from 'next/link';
-import { createServerClient } from '@/lib/supabase/server';
 import { Toaster } from '@/app/components/ui/sonner';
 import { ClientLayout } from '@/app/components/ClientLayout';
-import { RoleSwitcher } from '@/app/components/RoleSwitcher';
-import { isMasterAccountEnabled } from '@/lib/config';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -34,23 +31,6 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createServerClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  let role: string | null = null;
-  if (session) {
-    const { data: userRow } = await supabase
-      .from('users')
-      .select('role')
-      .eq('auth_id', session.user.id)
-      .single();
-    role = userRow?.role ?? null;
-  }
-
-  const showRoleSwitcher = session && (isMasterAccountEnabled() || role === 'admin');
-
   return (
     <html lang="en">
       <head>
@@ -84,61 +64,6 @@ export default async function RootLayout({
                   >
                     Get a Quote
                   </Link>
-
-                  {!session && (
-                    <Link
-                      href="/auth/sign-in"
-                      className="text-foreground hover:text-accent hover:bg-accent/10 px-3 py-2 rounded-xl text-sm font-medium transition-colors"
-                    >
-                      Sign in
-                    </Link>
-                  )}
-
-                  {session && (
-                    <>
-                      {(role === 'admin') && (
-                        <Link
-                          href="/admin"
-                          className="text-foreground hover:text-accent hover:bg-accent/10 px-3 py-2 rounded-xl text-sm font-medium transition-colors"
-                        >
-                          Admin
-                        </Link>
-                      )}
-                      {(role === 'admin' || role === 'dispatcher') && (
-                        <Link
-                          href="/dispatcher"
-                          className="text-foreground hover:text-accent hover:bg-accent/10 px-3 py-2 rounded-xl text-sm font-medium transition-colors"
-                        >
-                          Dispatcher
-                        </Link>
-                      )}
-                      {(role === 'driver' || role === 'dispatcher' || role === 'admin') && (
-                        <Link
-                          href="/driver"
-                          className="text-foreground hover:text-accent hover:bg-accent/10 px-3 py-2 rounded-xl text-sm font-medium transition-colors"
-                        >
-                          Driver
-                        </Link>
-                      )}
-                      {(role === 'recipient') && (
-                        <Link
-                          href="/customer/dashboard"
-                          className="text-foreground hover:text-accent hover:bg-accent/10 px-3 py-2 rounded-xl text-sm font-medium transition-colors"
-                        >
-                          My Orders
-                        </Link>
-                      )}
-                      {showRoleSwitcher && <RoleSwitcher currentRole={role} />}
-                      <form action="/auth/sign-out" method="post" className="inline">
-                        <button
-                          type="submit"
-                          className="text-foreground hover:text-accent hover:bg-accent/10 px-3 py-2 rounded-xl text-sm font-medium transition-colors"
-                        >
-                          Sign out
-                        </button>
-                      </form>
-                    </>
-                  )}
                 </div>
               </div>
             </div>

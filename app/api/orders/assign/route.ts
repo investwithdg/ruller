@@ -2,11 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { createHubSpotClient, sendHubSpotEmail, findDealByOrderId, updateHubSpotDeal } from '@/lib/hubspot/client';
-import { driverAssignedEmail } from '@/lib/hubspot/emails';
 import { sendPushNotification, type PushSubscription } from '@/lib/webpush/config';
-import { mapOrderToDealProperties } from '@/lib/hubspot/property-mappings';
-import type { OrderSyncData } from '@/lib/hubspot/types';
 import { z } from 'zod';
 import { assignDriverSchema } from '@/lib/validations';
 import { notifyDriverAssignment, notifyOrderStatusChange } from '@/lib/notifications/dispatcher';
@@ -234,121 +230,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Update HubSpot deal with driver assignment
-    const hubspotClient = createHubSpotClient();
-    if (hubspotClient) {
-      try {
-        // Find the deal by order ID
-        const dealId = await findDealByOrderId(hubspotClient, orderId);
-        
-        if (dealId) {
-          const driver = updatedOrder.drivers as any;
-          const customer = updatedOrder.customers as any;
-          const quotes = updatedOrder.quotes as any;
-          
-          // Create order sync data for property mapping
-          const orderSyncData: OrderSyncData = {
-            orderId: updatedOrder.id,
-            customerId: updatedOrder.customer_id!,
-            customerEmail: customer?.email || '',
-            customerName: customer?.name || undefined,
-            customerPhone: customer?.phone || undefined,
-            priceTotal: updatedOrder.price_total || 0,
-            currency: updatedOrder.currency || 'usd',
-            status: updatedOrder.status,
-            pickupAddress: quotes?.pickup_address || undefined,
-            dropoffAddress: quotes?.dropoff_address || undefined,
-            distanceMiles: quotes?.distance_mi || undefined,
-            driverId: updatedOrder.driver_id || undefined,
-            driverName: driver?.name || undefined,
-            driverPhone: driver?.phone || undefined,
-            createdAt: new Date(updatedOrder.created_at || new Date().toISOString()),
-            updatedAt: new Date(updatedOrder.updated_at || new Date().toISOString()),
-            
-            // Driver/Vehicle properties
-            vehicleType: driver?.vehicle_details?.type || 'van', // Default to van if not specified
-            
-            // Preserve delivery details from original order
-            deliveryRoute: quotes?.pickup_address && quotes?.dropoff_address 
-              ? `${quotes.pickup_address} → ${quotes.dropoff_address}`
-              : undefined,
-            deliveryLocation: quotes?.dropoff_address || undefined,
-            
-            // Quote properties remain the same
-            quoteSent: true,
-            quoteStatus: 'accepted',
-          };
-          
-          // Map to deal properties and update
-          const dealProperties = mapOrderToDealProperties(orderSyncData);
-          const updated = await updateHubSpotDeal(hubspotClient, dealId, dealProperties);
-          
-          if (updated) {
-            console.log(`Updated HubSpot deal ${dealId} with driver assignment`);
-          } else {
-            console.warn(`Failed to update HubSpot deal ${dealId}`);
-          }
-        } else {
-          console.warn(`No HubSpot deal found for order ${orderId}`);
-        }
-      } catch (hubspotError) {
-        console.error('Failed to update HubSpot deal:', hubspotError);
-        // Don't fail the request if HubSpot update fails
-      }
-    }
-
-    // Send driver assignment email to customer
-    if (hubspotClient && updatedOrder.customers?.email && updatedOrder.drivers) {
-      const customer = updatedOrder.customers as any;
-      const driver = updatedOrder.drivers as any;
-      const quotes = updatedOrder.quotes as any;
-      
-      const trackingUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/track/${orderId}`;
-      const emailTemplate = driverAssignedEmail(
-        {
-          orderId: updatedOrder.id,
-          customerName: customer.name || 'Customer',
-          customerEmail: customer.email,
-          pickupAddress: quotes?.pickup_address || 'N/A',
-          dropoffAddress: quotes?.dropoff_address || 'N/A',
-          distance: quotes?.distance_mi || 0,
-          priceTotal: updatedOrder.price_total || 0,
-          currency: updatedOrder.currency || 'usd',
-          trackingUrl,
-          createdAt: new Date(updatedOrder.created_at || new Date().toISOString()),
-        },
-        {
-          name: driver.name,
-          phone: driver.phone || 'N/A',
-          vehicleDetails: driver.vehicle_details 
-            ? JSON.stringify(driver.vehicle_details) 
-            : undefined,
-        }
-      );
-
-      const emailSent = await sendHubSpotEmail(hubspotClient, {
-        to: customer.email,
-        subject: emailTemplate.subject,
-        htmlContent: emailTemplate.html,
-      });
-
-      // Log email event
-      if (emailSent) {
-        await supabase
-          .from('dispatch_events')
-          .insert({
-            order_id: orderId,
-            actor: 'system',
-            event_type: 'email_sent',
-            payload: {
-              email_type: 'driver_assigned',
-              recipient: customer.email,
-            },
-            source: 'hubspot_email',
-            event_id: `email_${orderId}_driver_assigned_${Date.now()}`,
-          });
-      }
-    }
 
     return NextResponse.json({
       message: 'Driver assigned successfully',

@@ -1,16 +1,8 @@
-import { createServerClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import AdminClient from './AdminClient';
 
 export default async function AdminPage() {
-  const supabase = await createServerClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
-    redirect('/auth/sign-in');
-  }
+  const supabase = createServiceRoleClient();
 
   // Fetch users with roles
   const { data: users, error: usersError } = await supabase

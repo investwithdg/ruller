@@ -3,13 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 import Stripe from 'stripe';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import {
-  createHubSpotClient,
-  syncOrderToHubSpot,
-  sendHubSpotEmail,
-} from '@/lib/hubspot/client';
-import type { OrderSyncData } from '@/lib/hubspot/types';
-import { orderConfirmationEmail } from '@/lib/hubspot/emails';
 import { captureWebhookError, setSentryTag } from '@/lib/sentry';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -133,103 +126,6 @@ export async function POST(request: NextRequest) {
         });
 
       console.log('Order created successfully:', order.id);
-
-      // HubSpot Integration: Sync order to HubSpot with full property mapping
-      const hubspotClient = createHubSpotClient();
-      if (hubspotClient && quote.customers) {
-        const customer = quote.customers as any;
-        
-        const orderSyncData: OrderSyncData = {
-          orderId: order.id,
-          customerId: customerId,
-          customerEmail: customer.email,
-          customerName: customer.name || undefined,
-          customerPhone: customer.phone || undefined,
-          priceTotal: order.price_total || 0,
-          currency: order.currency || 'usd',
-          status: order.status,
-          pickupAddress: quote.pickup_address || undefined,
-          dropoffAddress: quote.dropoff_address || undefined,
-          distanceMiles: quote.distance_mi || undefined,
-          createdAt: new Date(order.created_at || new Date().toISOString()),
-          
-          // Delivery detail properties
-          deliveryRoute: quote.pickup_address && quote.dropoff_address 
-            ? `${quote.pickup_address} → ${quote.dropoff_address}`
-            : undefined,
-          deliveryLocation: quote.dropoff_address || undefined,
-          deliveryType: 'standard', // Default, could be derived from order data
-          weightBracket: 'medium', // Default, could be derived from package weight
-          specialDeliveryInstructions: (quote as any).special_instructions || undefined,
-          
-          // Quote properties (since they paid, quote was sent and accepted)
-          quoteSent: true,
-          quoteStatus: 'accepted',
-          quoteSource: 'website', // Default, could track actual source
-          servicesProposed: 'standard_delivery', // Default, could be from quote
-          rushRequested: false, // Could be derived from order urgency
-          
-          // Time properties (if available in quote)
-          scheduledPickupTime: (quote as any).scheduled_pickup_time 
-            ? new Date((quote as any).scheduled_pickup_time)
-            : undefined,
-          scheduledDeliveryTime: (quote as any).scheduled_delivery_time
-            ? new Date((quote as any).scheduled_delivery_time)
-            : undefined,
-        };
-
-        const syncResult = await syncOrderToHubSpot(hubspotClient, orderSyncData, undefined, supabase);
-        
-        if (!syncResult.success) {
-          console.error('HubSpot sync errors:', syncResult.errors);
-        }
-        
-        if (syncResult.warnings && syncResult.warnings.length > 0) {
-          console.warn('HubSpot sync warnings:', syncResult.warnings);
-        }
-        
-        if (syncResult.success) {
-          console.log(`Successfully synced order to HubSpot. Contact: ${syncResult.contactId}, Deal: ${syncResult.dealId}`);
-        }
-
-        // Send order confirmation email
-        const trackingUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/track/${order.id}`;
-        const emailTemplate = orderConfirmationEmail({
-          orderId: order.id,
-          customerName: customer.name || 'Customer',
-          customerEmail: customer.email,
-          pickupAddress: quote.pickup_address || 'N/A',
-          dropoffAddress: quote.dropoff_address || 'N/A',
-          distance: quote.distance_mi || 0,
-          priceTotal: order.price_total || 0,
-          currency: order.currency || 'usd',
-          trackingUrl,
-          createdAt: new Date(order.created_at || new Date().toISOString()),
-        });
-
-        const emailSent = await sendHubSpotEmail(hubspotClient, {
-          to: customer.email,
-          subject: emailTemplate.subject,
-          htmlContent: emailTemplate.html,
-        });
-
-        // Log email event
-        if (emailSent) {
-          await supabase
-            .from('dispatch_events')
-            .insert({
-              order_id: order.id,
-              actor: 'system',
-              event_type: 'email_sent',
-              payload: {
-                email_type: 'order_confirmation',
-                recipient: customer.email,
-              },
-              source: 'hubspot_email',
-              event_id: `email_${order.id}_confirmation_${Date.now()}`,
-            });
-        }
-      }
     }
 
     return NextResponse.json({ received: true });

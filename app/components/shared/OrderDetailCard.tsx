@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { StatusBadge } from '@/app/components/shared/StatusBadge';
-import { HubSpotLink } from '@/app/components/shared/HubSpotLink';
 import { Separator } from '@/app/components/ui/separator';
 import { MapPin, User, Phone, DollarSign, Package } from 'lucide-react';
 
@@ -63,12 +62,6 @@ export function OrderDetailCard({
           </div>
           <div className="flex flex-col items-end gap-2">
             <StatusBadge status={order.status} />
-            <HubSpotLink
-              orderId={order.id}
-              hubspotDealId={order.hubspot_deal_id ?? undefined}
-              hubspotContactId={order.customers?.hubspot_contact_id ?? undefined}
-              customerId={order.customers?.id ?? undefined}
-            />
           </div>
         </div>
       </CardHeader>

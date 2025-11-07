@@ -23,10 +23,6 @@ import {
 import { Badge } from '@/app/components/ui/badge';
 import { OrderRouteModal } from '@/app/components/modals/OrderRouteModal';
 import { Truck, Package, CheckCircle2, AlertCircle, Map, FileText } from 'lucide-react';
-import {
-  getDealPipelineForStatus,
-  getDeliveryStatusForStatus,
-} from '@/lib/hubspot/property-mappings';
 import { useRealtimeOrders } from '@/app/hooks/useRealtimeOrders';
 import { useRealtimeDrivers } from '@/app/hooks/useRealtimeDrivers';
 import { RealtimeIndicator } from '@/app/components/shared/SyncStatusIndicator';
@@ -156,16 +152,6 @@ export default function DispatcherClient({
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [bulkDriver, setBulkDriver] = useState<string>('');
   const [issueOrder, setIssueOrder] = useState<Order | null>(null);
-  const [orderForHubSpotDetails, setOrderForHubSpotDetails] = useState<Order | null>(null);
-  const [isSyncingHubSpot, setIsSyncingHubSpot] = useState(false);
-  const formatDateTime = (value?: string | null) => {
-    if (!value) return 'Not set';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'Not set';
-    return date.toLocaleString();
-  };
-  const hubspotMetadata = orderForHubSpotDetails?.hubspot_metadata as Record<string, any> | null;
-  const hasHubspotMetadata = !!(hubspotMetadata && Object.keys(hubspotMetadata).length > 0);
 
   // Real-time subscriptions
   const { orders, lastUpdate } = useRealtimeOrders({
@@ -569,21 +555,11 @@ export default function DispatcherClient({
                                     {order.quotes?.dropoff_address || 'N/A'}
                                   </p>
                                 </div>
-                                {order.hubspot_metadata?.deliveryType && (
-                                  <Badge variant="outline" className="text-xs uppercase">
-                                    {order.hubspot_metadata.deliveryType}
-                                  </Badge>
-                                )}
-                                {order.hubspot_metadata?.specialDeliveryInstructions && (
-                                  <p className="text-xs text-muted-foreground italic">
-                                    “{order.hubspot_metadata.specialDeliveryInstructions}”
-                                  </p>
-                                )}
                               </div>
                             </TableCell>
                             <TableCell>
                               <Badge variant="secondary">
-                                {getDealPipelineForStatus(order.status)}
+                                {order.status}
                               </Badge>
                             </TableCell>
                             <TableCell>
@@ -664,14 +640,6 @@ export default function DispatcherClient({
                                     <a href={`tel:${order.drivers.phone}`}>Driver</a>
                                   </Button>
                                 )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setOrderForHubSpotDetails(order)}
-                                  title="View HubSpot properties"
-                                >
-                                  <FileText className="h-4 w-4" />
-                                </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -764,228 +732,6 @@ export default function DispatcherClient({
             />
           )}
 
-          {/* HubSpot Properties Dialog */}
-          <Dialog
-            open={!!orderForHubSpotDetails}
-            onOpenChange={(open) => !open && setOrderForHubSpotDetails(null)}
-          >
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <div className="flex items-center justify-between">
-                  <DialogTitle>
-                    HubSpot details – #
-                    {orderForHubSpotDetails ? orderForHubSpotDetails.id.slice(-8) : '—'}
-                  </DialogTitle>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      if (orderForHubSpotDetails) {
-                        setIsSyncingHubSpot(true);
-                        syncOrderToHubSpotHandler(
-                          orderForHubSpotDetails.id,
-                          () => {
-                            toast.success('Synced to HubSpot');
-                            setIsSyncingHubSpot(false);
-                          },
-                          (error) => {
-                            toast.error('Sync failed', { description: error });
-                            setIsSyncingHubSpot(false);
-                          }
-                        );
-                      }
-                    }}
-                    disabled={isSyncingHubSpot}
-                  >
-                    {isSyncingHubSpot ? 'Syncing...' : 'Sync Now'}
-                  </Button>
-                </div>
-              </DialogHeader>
-              {hasHubspotMetadata ? (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <MetadataCard
-                      title="Pipeline"
-                      items={[
-                        {
-                          label: 'Stage',
-                          value:
-                            hubspotMetadata?.pipelineStage ||
-                            getDealPipelineForStatus(
-                              orderForHubSpotDetails?.status || 'ReadyForDispatch'
-                            ),
-                        },
-                        {
-                          label: 'Delivery Status',
-                          value:
-                            hubspotMetadata?.deliveryStatus ||
-                            getDeliveryStatusForStatus(
-                              orderForHubSpotDetails?.status || 'ReadyForDispatch'
-                            ),
-                        },
-                      ]}
-                    />
-                    <MetadataCard
-                      title="Driver & Vehicle"
-                      items={[
-                        { label: 'Driver', value: hubspotMetadata?.driverName || 'Unassigned' },
-                        { label: 'Phone', value: hubspotMetadata?.driverPhone || 'Not provided' },
-                        { label: 'Vehicle Type', value: hubspotMetadata?.vehicleType || 'Not set' },
-                      ]}
-                    />
-                  </div>
-
-                  <MetadataCard
-                    title="Delivery details"
-                    items={[
-                      { label: 'Route', value: hubspotMetadata?.deliveryRoute || 'Not set' },
-                      {
-                        label: 'Destination',
-                        value:
-                          hubspotMetadata?.deliveryLocation ||
-                          orderForHubSpotDetails?.quotes?.dropoff_address ||
-                          'Not set',
-                      },
-                      { label: 'Type', value: hubspotMetadata?.deliveryType || 'Standard' },
-                      {
-                        label: 'Weight Bracket',
-                        value: hubspotMetadata?.weightBracket || 'Not set',
-                      },
-                      {
-                        label: 'Special Instructions',
-                        value: hubspotMetadata?.specialDeliveryInstructions || 'None',
-                      },
-                    ]}
-                  />
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <MetadataCard
-                      title="Schedule"
-                      items={[
-                        {
-                          label: 'Scheduled Pickup',
-                          value: formatDateTime(hubspotMetadata?.scheduledPickupTime),
-                        },
-                        {
-                          label: 'Scheduled Delivery',
-                          value: formatDateTime(hubspotMetadata?.scheduledDeliveryTime),
-                        },
-                        {
-                          label: 'Actual Pickup',
-                          value: formatDateTime(hubspotMetadata?.actualPickupTime),
-                        },
-                        {
-                          label: 'Actual Delivery',
-                          value: formatDateTime(hubspotMetadata?.actualDeliveryTime),
-                        },
-                      ]}
-                    />
-                    <MetadataCard
-                      title="Quote attributes"
-                      items={[
-                        { label: 'Source', value: hubspotMetadata?.quoteSource || 'Website' },
-                        {
-                          label: 'Recurring',
-                          value: hubspotMetadata?.recurringFrequency || 'One-time',
-                        },
-                        {
-                          label: 'Rush Requested',
-                          value: hubspotMetadata?.rushRequested ? 'Yes' : 'No',
-                        },
-                        {
-                          label: 'Services Proposed',
-                          value: hubspotMetadata?.servicesProposed || 'Standard delivery',
-                        },
-                      ]}
-                    />
-                  </div>
-
-                  <MetadataCard
-                    title="Sync status"
-                    items={[
-                      {
-                        label: 'Last synced',
-                        value: formatDateTime(hubspotMetadata?.lastSyncedAt),
-                      },
-                      { label: 'Status', value: hubspotMetadata?.syncStatus || 'unknown' },
-                      {
-                        label: 'Warnings',
-                        value: hubspotMetadata?.syncWarnings?.length
-                          ? hubspotMetadata.syncWarnings.join(', ')
-                          : 'None',
-                      },
-                      {
-                        label: 'HubSpot Deal ID',
-                        value:
-                          hubspotMetadata?.dealId ||
-                          orderForHubSpotDetails?.hubspot_deal_id ||
-                          'Not linked',
-                      },
-                    ]}
-                  />
-
-                  <MetadataCard
-                    title="Payment Information"
-                    items={[
-                      {
-                        label: 'Status',
-                        value: (
-                          <Badge variant={getPaymentStatus(orderForHubSpotDetails!).variant}>
-                            {getPaymentStatus(orderForHubSpotDetails!).status}
-                          </Badge>
-                        ),
-                      },
-                      {
-                        label: 'Payment Intent',
-                        value: orderForHubSpotDetails?.stripe_payment_intent_id ? (
-                          <a
-                            href={`https://dashboard.stripe.com/payments/${orderForHubSpotDetails.stripe_payment_intent_id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-accent hover:underline"
-                          >
-                            {orderForHubSpotDetails.stripe_payment_intent_id.slice(0, 20)}...
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        ) : (
-                          'Not set'
-                        ),
-                      },
-                      {
-                        label: 'Checkout Session',
-                        value: orderForHubSpotDetails?.stripe_checkout_session_id ? (
-                          <a
-                            href={`https://dashboard.stripe.com/checkout/sessions/${orderForHubSpotDetails.stripe_checkout_session_id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-accent hover:underline"
-                          >
-                            {orderForHubSpotDetails.stripe_checkout_session_id.slice(0, 20)}...
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        ) : (
-                          'Not set'
-                        ),
-                      },
-                      {
-                        label: 'Amount',
-                        value: `$${orderForHubSpotDetails?.price_total.toFixed(2)} ${(orderForHubSpotDetails?.currency || 'USD').toUpperCase()}`,
-                      },
-                    ]}
-                  />
-                </div>
-              ) : (
-                <div className="py-6">
-                  <EmptyState
-                    icon={AlertCircle}
-                    title="No HubSpot metadata yet"
-                    description="This order has not been synced with HubSpot or metadata is unavailable."
-                  />
-                </div>
-              )}
-            </DialogContent>
-          </Dialog>
-
           {/* Issues Dialog */}
           {issueOrder && (
             <Dialog open={!!issueOrder} onOpenChange={() => setIssueOrder(null)}>
@@ -1034,31 +780,6 @@ export default function DispatcherClient({
       </div>
     </div>
   );
-}
-
-// HubSpot Sync Handler (defined outside component for potential reuse)
-async function syncOrderToHubSpotHandler(
-  orderId: string,
-  onSuccess: () => void,
-  onError: (msg: string) => void
-) {
-  try {
-    const response = await fetch('/api/orders/sync-hubspot', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderId }),
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      onSuccess();
-    } else {
-      onError(result.errors?.join(', ') || 'Unknown error');
-    }
-  } catch (error: any) {
-    onError(error.message);
-  }
 }
 
 function exportCSV(orders: any[]) {

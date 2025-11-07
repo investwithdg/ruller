@@ -1,12 +1,11 @@
 /**
  * Sync Status Indicator
- * Shows when data was last updated and if it's synced with HubSpot
+ * Shows when data was last updated
  */
 
 'use client';
 
-import { Badge } from '@/app/components/ui/badge';
-import { Cloud, Clock } from 'lucide-react';
+import { Clock } from 'lucide-react';
 
 interface SyncStatusIndicatorProps {
   lastUpdated?: Date | string | null;
@@ -33,29 +32,19 @@ export function SyncStatusIndicator({
   className = '',
   showDetails = false,
 }: SyncStatusIndicatorProps) {
-  const isSyncedToHubSpot = !!(hubspotDealId || hubspotContactId);
   const lastUpdateDate = lastUpdated ? new Date(lastUpdated) : null;
   const timeAgo = lastUpdateDate ? formatTimeAgo(lastUpdateDate) : 'Never';
 
-  if (!showDetails && !isSyncedToHubSpot) {
-    return null; // Don't show anything if not synced and details not requested
+  if (!showDetails || !lastUpdateDate) {
+    return null;
   }
 
   return (
     <div className={`flex items-center gap-2 text-xs ${className}`}>
-      {isSyncedToHubSpot && (
-        <Badge variant="secondary" className="gap-1">
-          <Cloud className="h-3 w-3" />
-          <span>Synced to HubSpot</span>
-        </Badge>
-      )}
-      
-      {showDetails && lastUpdateDate && (
-        <span className="text-muted-foreground flex items-center gap-1">
-          <Clock className="h-3 w-3" />
-          Updated {timeAgo}
-        </span>
-      )}
+      <span className="text-muted-foreground flex items-center gap-1">
+        <Clock className="h-3 w-3" />
+        Updated {timeAgo}
+      </span>
     </div>
   );
 }

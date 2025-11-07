@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -14,34 +14,11 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET() {
   try {
-    const cookieClient = await createServerClient();
-
-    // Verify admin access
-    const {
-      data: { session },
-    } = await cookieClient.auth.getSession();
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Check if user is admin
-    const { data: userRole } = await cookieClient
-      .from('users')
-      .select('role')
-      .eq('auth_id', session.user.id)
-      .single();
-
-    if (userRole?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const healthStatus = {
       timestamp: new Date().toISOString(),
       integrations: {
         supabase: await checkSupabaseHealth(),
         stripe: await checkStripeHealth(),
-        hubspot: await checkHubSpotHealth(),
         googleMaps: await checkGoogleMapsHealth(),
       },
     };
@@ -129,54 +106,6 @@ async function checkStripeHealth() {
     return {
       status: 'unhealthy',
       message: 'API request failed',
-      error: error.message,
-      lastCheck: new Date().toISOString(),
-    };
-  }
-}
-
-async function checkHubSpotHealth() {
-  try {
-    if (!process.env.HUBSPOT_PRIVATE_APP_TOKEN) {
-      return {
-        status: 'not_configured',
-        message: 'HubSpot token not configured',
-        lastCheck: new Date().toISOString(),
-      };
-    }
-
-    // Test HubSpot API with a simple request
-    const response = await fetch('https://api.hubapi.com/crm/v3/objects/contacts?limit=1', {
-      headers: {
-        Authorization: `Bearer ${process.env.HUBSPOT_PRIVATE_APP_TOKEN}`,
-      },
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      return {
-        status: 'unhealthy',
-        message: 'API request failed',
-        error,
-        lastCheck: new Date().toISOString(),
-      };
-    }
-
-    const data = await response.json();
-
-    return {
-      status: 'healthy',
-      message: 'Connected',
-      metadata: {
-        totalContacts: data.total || 0,
-        rateLimit: response.headers.get('x-hubspot-ratelimit-remaining'),
-      },
-      lastCheck: new Date().toISOString(),
-    };
-  } catch (error: any) {
-    return {
-      status: 'unhealthy',
-      message: 'Connection failed',
       error: error.message,
       lastCheck: new Date().toISOString(),
     };

@@ -1,16 +1,8 @@
-import { createServerClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import DispatcherClient from './DispatcherClient';
 
 export default async function DispatcherPage() {
-  const supabase = await createServerClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
-    redirect('/auth/sign-in');
-  }
+  const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
     .from('orders')

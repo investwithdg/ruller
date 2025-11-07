@@ -99,7 +99,7 @@ type Props = {
   stats: Stats;
 };
 
-type Tab = 'overview' | 'users' | 'drivers' | 'orders' | 'pricing' | 'logs';
+type Tab = 'overview' | 'drivers' | 'orders' | 'pricing' | 'logs';
 
 function HealthStatusItem({
   title,
@@ -144,22 +144,9 @@ export default function AdminClient({ initialUsers, initialDrivers, initialOrder
   const [isHealthLoading, setIsHealthLoading] = useState(false);
   const [healthError, setHealthError] = useState<string | null>(null);
 
-  // User management state
-  const [users, setUsers] = useState<User[]>(initialUsers);
-  const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
-  const [isEditUserOpen, setIsEditUserOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newUser, setNewUser] = useState({
-    email: '',
-    password: '',
-    role: 'recipient' as 'admin' | 'dispatcher' | 'driver' | 'recipient',
-    name: '',
-  });
 
   const tabs = [
     { id: 'overview' as Tab, name: 'Overview', icon: LayoutDashboard },
-    { id: 'users' as Tab, name: 'Users', icon: Users },
     { id: 'drivers' as Tab, name: 'Drivers', icon: TruckIcon },
     { id: 'orders' as Tab, name: 'Orders', icon: Package },
     { id: 'pricing' as Tab, name: 'Pricing', icon: DollarSign },
@@ -224,120 +211,6 @@ export default function AdminClient({ initialUsers, initialDrivers, initialOrder
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
-  // User Management Functions
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch('/api/admin/users');
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data.users || []);
-      }
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      toast.error('Failed to fetch users');
-    }
-  };
-
-  const handleCreateUser = async () => {
-    if (!newUser.email || !newUser.password) {
-      toast.error('Email and password are required');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const response = await fetch('/api/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newUser),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create user');
-      }
-
-      toast.success('User created successfully');
-      setIsCreateUserOpen(false);
-      setNewUser({ email: '', password: '', role: 'recipient', name: '' });
-      await fetchUsers();
-    } catch (error: any) {
-      console.error('Error creating user:', error);
-      toast.error(error.message || 'Failed to create user');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleUpdateUserRole = async (userId: string, newRole: string) => {
-    setIsSubmitting(true);
-    try {
-      const response = await fetch('/api/admin/users', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, role: newRole }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update user role');
-      }
-
-      toast.success('User role updated');
-      await fetchUsers();
-      setIsEditUserOpen(false);
-      setSelectedUser(null);
-    } catch (error) {
-      console.error('Error updating user:', error);
-      toast.error('Failed to update user role');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleBanUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to ban this user?')) return;
-
-    try {
-      const response = await fetch('/api/admin/users', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, action: 'ban' }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to ban user');
-      }
-
-      toast.success('User banned');
-      await fetchUsers();
-    } catch (error) {
-      console.error('Error banning user:', error);
-      toast.error('Failed to ban user');
-    }
-  };
-
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.'))
-      return;
-
-    try {
-      const response = await fetch('/api/admin/users', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete user');
-      }
-
-      toast.success('User deleted');
-      await fetchUsers();
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      toast.error('Failed to delete user');
-    }
-  };
 
   // Export orders to CSV
   const exportOrdersCSV = () => {
@@ -554,40 +427,6 @@ export default function AdminClient({ initialUsers, initialDrivers, initialOrder
                       }
                     />
                     <HealthStatusItem
-                      title="HubSpot"
-                      description={
-                        integrationsHealth?.integrations?.hubspot?.status === 'healthy'
-                          ? 'Connected'
-                          : systemHealth.hubspot?.missing?.length
-                            ? `Missing: ${systemHealth.hubspot.missing.join(', ')}`
-                            : 'Private app token & pipeline detected'
-                      }
-                      ok={
-                        !!systemHealth.hubspot?.configured &&
-                        integrationsHealth?.integrations?.hubspot?.status !== 'unhealthy'
-                      }
-                      extra={
-                        integrationsHealth?.integrations?.hubspot?.metadata && (
-                          <div className="mt-2 pt-2 border-t border-border/50 space-y-1">
-                            <div className="flex justify-between text-xs">
-                              <span className="text-muted-foreground">Contacts:</span>
-                              <span className="font-medium">
-                                {integrationsHealth.integrations.hubspot.metadata.totalContacts}
-                              </span>
-                            </div>
-                            {integrationsHealth.integrations.hubspot.metadata.rateLimit && (
-                              <div className="flex justify-between text-xs">
-                                <span className="text-muted-foreground">Rate Limit Remaining:</span>
-                                <span className="font-medium">
-                                  {integrationsHealth.integrations.hubspot.metadata.rateLimit}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        )
-                      }
-                    />
-                    <HealthStatusItem
                       title="Stripe"
                       description={
                         integrationsHealth?.integrations?.stripe?.status || 'Secret key configured'
@@ -703,192 +542,6 @@ export default function AdminClient({ initialUsers, initialDrivers, initialOrder
               </CardContent>
             </Card>
           </div>
-        )}
-
-        {/* Users Tab */}
-        {activeTab === 'users' && (
-          <>
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>User Management</CardTitle>
-                    <CardDescription>Manage platform users and their roles</CardDescription>
-                  </div>
-                  <Button variant="accent" onClick={() => setIsCreateUserOpen(true)}>
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Add User
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((user: any) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.email}</TableCell>
-                        <TableCell>
-                          <Badge variant="accent" className="capitalize">
-                            {user.role}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={user.banned ? 'destructive' : 'success'}>
-                            {user.banned ? 'Banned' : 'Active'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedUser(user);
-                                setIsEditUserOpen(true);
-                              }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleBanUser(user.auth_id)}
-                            >
-                              <Ban className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteUser(user.auth_id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-
-            {/* Create User Dialog */}
-            <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New User</DialogTitle>
-                  <DialogDescription>
-                    Add a new user to the platform with a specific role.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="user@example.com"
-                      value={newUser.email}
-                      onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Name (Optional)</Label>
-                    <Input
-                      id="name"
-                      placeholder="John Doe"
-                      value={newUser.name}
-                      onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={newUser.password}
-                      onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="role">Role</Label>
-                    <Select
-                      value={newUser.role}
-                      onValueChange={(value: any) => setNewUser({ ...newUser, role: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="recipient">Customer</SelectItem>
-                        <SelectItem value="driver">Driver</SelectItem>
-                        <SelectItem value="dispatcher">Dispatcher</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex gap-2 pt-4">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => setIsCreateUserOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button className="flex-1" onClick={handleCreateUser} disabled={isSubmitting}>
-                      {isSubmitting ? 'Creating...' : 'Create User'}
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            {/* Edit User Dialog */}
-            <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Edit User Role</DialogTitle>
-                  <DialogDescription>Change the role for {selectedUser?.email}</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-role">Role</Label>
-                    <Select
-                      defaultValue={selectedUser?.role}
-                      onValueChange={(value) => {
-                        if (selectedUser) {
-                          handleUpdateUserRole(selectedUser.auth_id || selectedUser.id, value);
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="recipient">Customer</SelectItem>
-                        <SelectItem value="driver">Driver</SelectItem>
-                        <SelectItem value="dispatcher">Dispatcher</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </>
         )}
 
         {/* Drivers Tab */}

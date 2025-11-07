@@ -50,14 +50,6 @@ export function DispatcherSidebar() {
         })}
       </nav>
 
-      <Separator />
-
-      <form action="/auth/sign-out" method="post">
-        <Button type="submit" variant="ghost" className="w-full justify-start gap-2">
-          <LogOut className="h-4 w-4" />
-          Log Out
-        </Button>
-      </form>
     </aside>
   );
 }

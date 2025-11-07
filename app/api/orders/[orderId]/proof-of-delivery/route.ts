@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { uploadProofOfDelivery, getProofOfDelivery } from '@/lib/proof-of-delivery/storage';
-import { createHubSpotClient, syncOrderToHubSpot } from '@/lib/hubspot/client';
-import type { OrderSyncData } from '@/lib/hubspot/types';
 
 /**
  * GET /api/orders/[orderId]/proof-of-delivery
@@ -13,17 +11,6 @@ export async function GET(
   { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
-    const supabase = await createServerClient();
-
-    // Verify authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { orderId } = await params;
 
     // Get proof of delivery
@@ -49,30 +36,8 @@ export async function POST(
   { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
-    const supabase = await createServerClient();
-    const supabaseClient = supabase as any;
     const serviceSupabase = createServiceRoleClient();
     const serviceClient = serviceSupabase as any;
-
-    // Verify authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get driver ID from user
-    const { data: driver, error: driverError } = await supabaseClient
-      .from('drivers')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (driverError || !driver) {
-      return NextResponse.json({ error: 'Driver not found' }, { status: 403 });
-    }
 
     const { orderId } = await params;
 
@@ -165,71 +130,6 @@ export async function POST(
       // Don't fail the request - PoD is already saved
     }
 
-    // Sync to HubSpot
-    const hubspotClient = createHubSpotClient();
-    if (hubspotClient) {
-      try {
-        const { data: orderDetails } = await serviceClient
-          .from('orders')
-          .select(
-            `
-            *,
-            customers (id, name, email, phone),
-            quotes (pickup_address, dropoff_address, distance_mi),
-            drivers (name, phone)
-          `
-          )
-          .eq('id', orderId)
-          .single();
-
-        if (orderDetails) {
-          const metadata = (orderDetails as any).hubspot_metadata || {};
-          const orderSyncData: OrderSyncData = {
-            orderId: orderDetails.id,
-            customerId: orderDetails.customer_id || order.customer_id || '',
-            customerEmail: orderDetails.customers?.email || '',
-            customerName: orderDetails.customers?.name || undefined,
-            customerPhone: orderDetails.customers?.phone || undefined,
-            priceTotal: orderDetails.price_total || 0,
-            currency: orderDetails.currency || 'usd',
-            status: 'Delivered',
-            pickupAddress: orderDetails.quotes?.pickup_address || undefined,
-            dropoffAddress: orderDetails.quotes?.dropoff_address || undefined,
-            distanceMiles: orderDetails.quotes?.distance_mi || undefined,
-            driverId: orderDetails.driver_id || undefined,
-            driverName: orderDetails.drivers?.name || undefined,
-            driverPhone: orderDetails.drivers?.phone || undefined,
-            createdAt: new Date(orderDetails.created_at || new Date().toISOString()),
-            updatedAt: new Date(),
-            actualDeliveryTime: new Date(),
-            deliveryRoute:
-              metadata?.deliveryRoute ||
-              (orderDetails.quotes?.pickup_address && orderDetails.quotes?.dropoff_address
-                ? `${orderDetails.quotes.pickup_address} → ${orderDetails.quotes.dropoff_address}`
-                : undefined),
-            deliveryLocation:
-              metadata?.deliveryLocation || orderDetails.quotes?.dropoff_address || undefined,
-            deliveryType: metadata?.deliveryType || undefined,
-            weightBracket: metadata?.weightBracket || undefined,
-            specialDeliveryInstructions:
-              metadata?.specialDeliveryInstructions ||
-              (orderDetails.quotes as any)?.special_instructions ||
-              undefined,
-            quoteSource: metadata?.quoteSource || undefined,
-            recurringFrequency: metadata?.recurringFrequency || undefined,
-            rushRequested:
-              typeof metadata?.rushRequested === 'boolean' ? metadata.rushRequested : undefined,
-            servicesProposed: metadata?.servicesProposed || undefined,
-            snapshotAuditSent: metadata?.snapshotAuditSent || undefined,
-          };
-
-          await syncOrderToHubSpot(hubspotClient, orderSyncData, existingDealId, serviceSupabase);
-        }
-      } catch (syncError) {
-        console.error('Failed to sync to HubSpot:', syncError);
-        // Don't fail the request - PoD is saved and order is updated
-      }
-    }
 
     return NextResponse.json({
       success: true,

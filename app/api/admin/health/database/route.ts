@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,28 +9,6 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET() {
   try {
-    const cookieClient = await createServerClient();
-
-    // Verify admin access
-    const {
-      data: { session },
-    } = await cookieClient.auth.getSession();
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Check if user is admin
-    const { data: userRole } = await cookieClient
-      .from('users')
-      .select('role')
-      .eq('auth_id', session.user.id)
-      .single();
-
-    if (userRole?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const supabase = createServiceRoleClient();
 
     // Get table row counts

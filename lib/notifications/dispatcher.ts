@@ -1,5 +1,3 @@
-import { createHubSpotClient, sendHubSpotEmail } from '@/lib/hubspot/client';
-import { driverAssignmentNotificationEmail, statusUpdateEmail } from '@/lib/hubspot/emails';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { isTwilioConfigured, sendSms } from './providers/twilio';
 
@@ -124,8 +122,6 @@ function normalizePhoneNumber(phone?: string): string | null {
  * @param params - Driver assignment notification parameters
  */
 export async function notifyDriverAssignment(params: DriverAssignmentParams): Promise<void> {
-  const hubspotClient = createHubSpotClient();
-
   let driverEmail = params.driverEmail;
   let driverPhone = params.driverPhone;
 
@@ -133,39 +129,6 @@ export async function notifyDriverAssignment(params: DriverAssignmentParams): Pr
     const resolved = await resolveDriverContact(params.driverId);
     driverEmail = driverEmail || resolved.email;
     driverPhone = driverPhone || resolved.phone;
-  }
-
-  const orderSummary = {
-    orderId: params.orderId,
-    customerName: params.customerName,
-    customerEmail: params.customerEmail || 'support@preferredsolutions.com',
-    customerPhone: params.customerPhone,
-    pickupAddress: params.pickupAddress,
-    dropoffAddress: params.dropoffAddress,
-    distance: params.distance || 0,
-    priceTotal: params.priceTotal || 0,
-    currency: (params.currency || 'usd').toLowerCase(),
-    trackingUrl: `${APP_URL}/driver`,
-    createdAt: new Date(),
-  };
-
-  if (hubspotClient && driverEmail) {
-    try {
-      const driverTemplate = driverAssignmentNotificationEmail(orderSummary, {
-        name: params.driverName || 'Driver',
-        phone: driverPhone || '',
-      });
-
-      await sendHubSpotEmail(hubspotClient, {
-        to: driverEmail,
-        subject: driverTemplate.subject,
-        htmlContent: driverTemplate.html,
-      });
-    } catch (error) {
-      console.error('[Notifications] Failed to send driver assignment email:', error);
-    }
-  } else {
-    console.warn('[Notifications] Driver email not available; assignment email skipped.');
   }
 
   const normalizedPhone = normalizePhoneNumber(driverPhone);
@@ -201,48 +164,6 @@ export async function notifyOrderStatusChange(params: OrderStatusChangeParams): 
   const statusDisplay =
     STATUS_LABELS[params.newStatus] ||
     params.newStatus.replace(/([A-Z])/g, ' $1').trim();
-  const hubspotClient = createHubSpotClient();
-
-  if (hubspotClient && params.customerEmail) {
-    try {
-      const orderSummary = {
-        orderId: params.orderId,
-        customerName: params.customerName || 'Customer',
-        customerEmail: params.customerEmail,
-        customerPhone: params.customerPhone,
-        pickupAddress: params.pickupAddress || 'N/A',
-        dropoffAddress: params.dropoffAddress || 'N/A',
-        distance: params.distance || 0,
-        priceTotal: params.priceTotal || 0,
-        currency: (params.currency || 'usd').toLowerCase(),
-        trackingUrl: `${APP_URL}/track/${params.orderId}`,
-        createdAt: new Date(),
-      };
-
-      const statusTemplate = statusUpdateEmail(
-        orderSummary,
-        {
-          status: params.newStatus,
-          statusDisplay,
-          timestamp: new Date(),
-        },
-        params.driverName
-          ? {
-              name: params.driverName,
-              phone: params.driverPhone || '',
-            }
-          : undefined
-      );
-
-      await sendHubSpotEmail(hubspotClient, {
-        to: params.customerEmail,
-        subject: statusTemplate.subject,
-        htmlContent: statusTemplate.html,
-      });
-    } catch (error) {
-      console.error('[Notifications] Failed to send status update email:', error);
-    }
-  }
 
   const normalizedPhone = normalizePhoneNumber(params.customerPhone);
   if (normalizedPhone && isTwilioConfigured()) {
