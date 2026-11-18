@@ -1,0 +1,72 @@
+{
+  "expo": {
+    "name": "Rüller OS",
+    "slug": "ruller-os",
+    "scheme": "rulleros",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rulleros.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This dispatch app uses your location to calculate delivery routes, assign nearby drivers, and display live order tracking to customers and dispatchers.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This dispatch app uses background location while drivers are on duty so dispatchers and customers can track active deliveries in real time during turn-by-turn navigation.",
+        "NSCameraUsageDescription": "This dispatch app uses your camera so drivers can capture Proof of Delivery photos at dropoff.",
+        "NSPhotoLibraryUsageDescription": "This dispatch app accesses your photo library so drivers can attach Proof of Delivery images to completed orders.",
+        "UIBackgroundModes": [
+          "location",
+          "fetch",
+          "remote-notification"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.rulleros.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "CAMERA",
+        "READ_MEDIA_IMAGES"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow active background location updates while drivers are on duty.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Allow drivers to capture Proof of Delivery photos at dropoff.",
+          "photosPermission": "Allow drivers to attach Proof of Delivery images from your photo library."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

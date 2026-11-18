@@ -13,6 +13,8 @@ const eslintConfig = [
   {
     ignores: [
       "node_modules/**",
+      "mobile/**",
+      "**/._*",
       ".next/**",
       ".vercel/**",
       "build/**",

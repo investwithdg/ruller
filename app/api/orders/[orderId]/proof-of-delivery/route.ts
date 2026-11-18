@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import { uploadProofOfDelivery, getProofOfDelivery } from '@/lib/proof-of-delivery/storage';
 
 /**
@@ -36,8 +36,7 @@ export async function POST(
   { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
-    const serviceSupabase = createServiceRoleClient();
-    const serviceClient = serviceSupabase as any;
+    const supabaseClient = createServiceRoleClient();
 
     const { orderId } = await params;
 
@@ -65,6 +64,7 @@ export async function POST(
     // Extract text fields
     notes = (formData.get('notes') as string) || '';
     recipientName = (formData.get('recipientName') as string) || '';
+    const submittedDriverId = (formData.get('driverId') as string) || '';
 
     // Validate
     if (photos.length === 0 && !signature) {
@@ -78,10 +78,10 @@ export async function POST(
       return NextResponse.json({ error: 'Recipient name is required' }, { status: 400 });
     }
 
-    // Verify order exists and is assigned to this driver
+    // Verify order exists and is assigned to a driver
     const { data: order, error: orderError } = await supabaseClient
       .from('orders')
-      .select('id, driver_id, status, customer_id, hubspot_deal_id')
+      .select('id, driver_id, status, customer_id')
       .eq('id', orderId)
       .single();
 
@@ -89,15 +89,18 @@ export async function POST(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    const existingDealId = (order as any).hubspot_deal_id || undefined;
+    const effectiveDriverId = submittedDriverId || order.driver_id;
+    if (!effectiveDriverId) {
+      return NextResponse.json({ error: 'Order does not have an assigned driver' }, { status: 400 });
+    }
 
-    if (order.driver_id !== driver.id) {
+    if (order.driver_id && submittedDriverId && order.driver_id !== submittedDriverId) {
       return NextResponse.json({ error: 'Order not assigned to this driver' }, { status: 403 });
     }
 
     // Check if PoD already exists
     const { data: existingPod } = await supabaseClient
-      .from('delivery_proof' as any)
+      .from('delivery_proof')
       .select('id')
       .eq('order_id', orderId)
       .single();
@@ -109,7 +112,7 @@ export async function POST(
     // Upload proof of delivery
     const result = await uploadProofOfDelivery({
       orderId,
-      driverId: driver.id,
+      driverId: effectiveDriverId,
       photos,
       signature,
       notes,
@@ -127,9 +130,7 @@ export async function POST(
 
     if (updateError) {
       console.error('Failed to update order status:', updateError);
-      // Don't fail the request - PoD is already saved
     }
-
 
     return NextResponse.json({
       success: true,

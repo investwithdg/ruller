@@ -24,20 +24,6 @@ import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Separator } from '@/app/components/ui/separator';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/app/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/app/components/ui/select';
-import {
   LayoutDashboard,
   Users,
   TruckIcon,
@@ -51,9 +37,7 @@ import {
   FileText,
   Download,
   Filter,
-  Ban,
 } from 'lucide-react';
-import { toast } from 'sonner';
 
 type User = {
   id: string;
@@ -128,7 +112,7 @@ function HealthStatusItem({
   );
 }
 
-export default function AdminClient({ initialUsers, initialDrivers, initialOrders, stats }: Props) {
+export default function AdminClient({ initialUsers: _initialUsers, initialDrivers, initialOrders, stats }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [logs, setLogs] = useState<any[]>([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);

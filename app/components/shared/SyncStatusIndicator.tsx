@@ -27,8 +27,8 @@ function formatTimeAgo(date: Date): string {
 
 export function SyncStatusIndicator({
   lastUpdated,
-  hubspotDealId,
-  hubspotContactId,
+  hubspotDealId: _hubspotDealId,
+  hubspotContactId: _hubspotContactId,
   className = '',
   showDetails = false,
 }: SyncStatusIndicatorProps) {

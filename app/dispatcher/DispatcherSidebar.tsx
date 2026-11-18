@@ -5,8 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
-import { Separator } from '@/app/components/ui/separator';
-import { Settings, ListOrdered, Bell, Map as MapIcon, FileText, LogOut, User } from 'lucide-react';
+import { Settings, ListOrdered, Bell, Map as MapIcon, FileText, User } from 'lucide-react';
 
 const navItems = [
   { href: '/dispatcher/profile', label: 'Profile', icon: User },

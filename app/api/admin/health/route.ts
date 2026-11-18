@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { isTwilioConfigured } from '@/lib/notifications/providers/twilio';
 
 export const runtime = 'nodejs';
 
@@ -29,7 +28,7 @@ export async function GET() {
   };
 
   const notificationsStatus = {
-    sms: isTwilioConfigured(),
+    sms: Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
     push: Boolean(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
   };
 

@@ -22,7 +22,7 @@ import {
 } from '@/app/components/ui/table';
 import { Badge } from '@/app/components/ui/badge';
 import { OrderRouteModal } from '@/app/components/modals/OrderRouteModal';
-import { Truck, Package, CheckCircle2, AlertCircle, Map, FileText } from 'lucide-react';
+import { Truck, Package, CheckCircle2, AlertCircle, Map } from 'lucide-react';
 import { useRealtimeOrders } from '@/app/hooks/useRealtimeOrders';
 import { useRealtimeDrivers } from '@/app/hooks/useRealtimeDrivers';
 import { RealtimeIndicator } from '@/app/components/shared/SyncStatusIndicator';
@@ -86,7 +86,7 @@ interface DispatcherClientProps {
   drivers: Driver[];
 }
 
-function MetadataCard({
+export function MetadataCard({
   title,
   items,
 }: {
