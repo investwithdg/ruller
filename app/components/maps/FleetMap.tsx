@@ -32,7 +32,7 @@ export default function FleetMap({ orders, drivers, driverLocations, onSelect }:
 
   useEffect(() => {
     // The script is already loaded once; just rely on window.google
-    if (!window.google?.maps) {
+    if (typeof window === 'undefined' || !window.google?.maps) {
       return;
     }
     if (!mapRef.current) return;
@@ -121,7 +121,7 @@ export default function FleetMap({ orders, drivers, driverLocations, onSelect }:
     };
   }, [orders, drivers, driverLocations, onSelect]);
 
-  if (!window.google?.maps) {
+  if (typeof window === 'undefined' || !window.google?.maps) {
     return <div className="p-6 text-sm text-muted-foreground">Loading map…</div>;
   }
 

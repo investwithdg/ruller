@@ -36,7 +36,7 @@ export default function LiveTrackingMap({
   const routeLineRef = useRef<google.maps.Polyline | null>(null);
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  const isLoaded = !!window.google?.maps;
+  const isLoaded = typeof window !== 'undefined' && !!window.google?.maps;
   const loadError = undefined as any;
 
   // Initialize Google Maps

@@ -2,6 +2,8 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import TrackingClient from './TrackingClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function TrackOrderPage({ params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await params;
   const supabase = createServiceRoleClient();

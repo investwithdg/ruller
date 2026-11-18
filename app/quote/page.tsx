@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { calculatePrice, PRICING } from '@/lib/pricing';
 import { Autocomplete } from '@react-google-maps/api';
@@ -82,7 +82,7 @@ function GoogleMapsAutocompleteInput({ value, onChange, id, name, label, require
   );
 }
 
-export default function QuotePage() {
+function QuoteContent() {
   const searchParams = useSearchParams();
   const tenantSlug = searchParams.get('tenant') || searchParams.get('company');
   const tenant = resolveTenantFromSlug(tenantSlug);
@@ -541,5 +541,19 @@ export default function QuotePage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function QuotePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <LoadingState message="Loading quote form..." />
+        </div>
+      }
+    >
+      <QuoteContent />
+    </Suspense>
   );
 }

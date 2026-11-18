@@ -1,6 +1,8 @@
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import DispatcherClient from './DispatcherClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DispatcherPage() {
   const supabase = createServiceRoleClient();
 

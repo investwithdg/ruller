@@ -1,11 +1,18 @@
 'use client';
 
+import nextDynamic from 'next/dynamic';
 import { PageHeader } from '@/app/components/shared/PageHeader';
-import FleetMap from '@/app/components/maps/FleetMap';
 import { useRealtimeOrders } from '@/app/hooks/useRealtimeOrders';
 import { useRealtimeDrivers } from '@/app/hooks/useRealtimeDrivers';
 import { useDriverLocations } from '@/app/hooks/useDriverLocations';
 import { Card, CardContent } from '@/app/components/ui/card';
+
+const FleetMap = nextDynamic(() => import('@/app/components/maps/FleetMap'), {
+  ssr: false,
+  loading: () => <div className="p-6 text-sm text-muted-foreground">Loading fleet map…</div>,
+});
+
+export const dynamic = 'force-dynamic';
 
 export default function DispatcherMapPage() {
   const { orders } = useRealtimeOrders({});

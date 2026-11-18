@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader } from '@/app/components/ui/card';
@@ -11,14 +11,14 @@ import {
   CheckCircle2, 
   Package, 
   Mail, 
-  Phone,
-  MapPin,
-  DollarSign,
-  Calendar,
-  TruckIcon
+  Phone, 
+  MapPin, 
+  DollarSign, 
+  Calendar, 
+  TruckIcon 
 } from 'lucide-react';
 
-export default function ThankYouPage() {
+function ThankYouContent() {
   const searchParams = useSearchParams();
   const [orderData, setOrderData] = useState<any>(null);
   const sessionId = searchParams.get('session_id');
@@ -255,5 +255,19 @@ export default function ThankYouPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function ThankYouPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center p-8 text-sm text-muted-foreground">
+          Loading confirmation...
+        </div>
+      }
+    >
+      <ThankYouContent />
+    </Suspense>
   );
 }

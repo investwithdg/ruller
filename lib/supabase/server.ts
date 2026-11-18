@@ -24,9 +24,15 @@ export async function createServerClientRSC() {
     return createServiceRoleClient();
   }
 
+  const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = (envUrl && (envUrl.startsWith('http://') || envUrl.startsWith('https://')))
+    ? envUrl
+    : 'https://placeholder.supabase.co';
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+
   return createSupabaseServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    anon,
     {
       cookies: {
         get(name: string) {
@@ -44,8 +50,11 @@ export async function createServerClientRSC() {
 }
 
 export function createServiceRoleClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = (envUrl && (envUrl.startsWith('http://') || envUrl.startsWith('https://')))
+    ? envUrl
+    : 'https://placeholder.supabase.co';
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-key';
   
   return createServiceClient<Database>(url, serviceKey, {
     auth: { 
