@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/app
 import { Separator } from '@/app/components/ui/separator';
 import { PageHeader } from '@/app/components/shared/PageHeader';
 import { LoadingState } from '@/app/components/shared/LoadingState';
+import { resolveTenantFromSlug } from '@/lib/tenant-resolver';
 import { 
   MapPin, 
   User, 
@@ -83,6 +84,8 @@ function GoogleMapsAutocompleteInput({ value, onChange, id, name, label, require
 
 export default function QuotePage() {
   const searchParams = useSearchParams();
+  const tenantSlug = searchParams.get('tenant') || searchParams.get('company');
+  const tenant = resolveTenantFromSlug(tenantSlug);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -253,11 +256,21 @@ export default function QuotePage() {
   return (
     <div className="min-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8">
       <div className="container max-w-[1000px] mx-auto" data-testid="quote-page">
+        {tenant.isWhiteLabel && (
+          <div className="flex items-center gap-2 mb-4 bg-muted/60 border rounded-full px-3 py-1 w-fit">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tenant.primaryColor }} />
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {tenant.companyName} Dispatch Booking
+            </span>
+          </div>
+        )}
         <PageHeader
-          title="Get a Delivery Quote"
-          description="Fill in your delivery details and get an instant price estimate"
+          title={tenant.isWhiteLabel ? `${tenant.companyName} Dispatch` : "Get a Delivery Quote"}
+          description={tenant.isWhiteLabel 
+            ? `${tenant.tagline}. Direct dispatch, live GPS tracking, and instant proof-of-delivery.`
+            : "Fill in your delivery details and get an instant price estimate"}
           breadcrumbs={[
-            { label: 'Home', href: '/' },
+            { label: tenant.isWhiteLabel ? tenant.shortName : 'Home', href: '/' },
             { label: 'Request Quote' },
           ]}
         />

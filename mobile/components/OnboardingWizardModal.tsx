@@ -356,6 +356,7 @@ export function OnboardingWizardModal({
           >
             {mode === "storyboard" ? (
               <View className="gap-3">
+                {/* 1. Header Banner */}
                 <View className="bg-[#09090B] rounded-2xl p-4">
                   <Text className="text-xs font-bold uppercase tracking-wider text-white/60">
                     End-to-End Visibility
@@ -365,34 +366,104 @@ export function OnboardingWizardModal({
                   </Text>
                 </View>
 
+                {/* 2. 45-Sec Screen Recording Video Card Slot */}
+                <View className="bg-[#18181B] rounded-2xl overflow-hidden border border-white/10">
+                  <Pressable
+                    onPress={() => {
+                      startLiveRunSimulation();
+                      onClose();
+                    }}
+                    className="h-40 bg-[#09090B] items-center justify-center relative active:opacity-90"
+                  >
+                    <View className="w-14 h-14 rounded-full bg-white/20 items-center justify-center border border-white/40">
+                      <Ionicons
+                        name="play"
+                        size={28}
+                        color="#FFFFFF"
+                        style={{ marginLeft: 3 }}
+                      />
+                    </View>
+
+                    <View className="absolute top-3 left-3 bg-black/80 px-2.5 py-1 rounded-full flex-row items-center gap-1.5 border border-white/10">
+                      <View className="w-2 h-2 rounded-full bg-emerald-400" />
+                      <Text className="text-[10px] font-bold text-white uppercase tracking-wider">
+                        45-Sec Walkthrough
+                      </Text>
+                    </View>
+
+                    <View className="absolute bottom-3 right-3 bg-black/80 px-2 py-0.5 rounded-md">
+                      <Text className="text-[10px] font-mono font-bold text-white">
+                        0:45
+                      </Text>
+                    </View>
+                  </Pressable>
+
+                  <View className="p-3.5 bg-[#18181B] flex-row items-center justify-between">
+                    <View className="flex-1 pr-3">
+                      <Text className="text-xs font-bold text-white">
+                        Watch How Rüller Runs End-to-End
+                      </Text>
+                      <Text className="text-[11px] text-[#A1A1AA] mt-0.5">
+                        Web Booking → Instant Quote → Live GPS → Signed POD.
+                      </Text>
+                    </View>
+                    <Pressable
+                      onPress={() => {
+                        startLiveRunSimulation();
+                        onClose();
+                      }}
+                      style={{ backgroundColor: brandConfig.theme.primary }}
+                      className="px-3 py-2 rounded-xl flex-row items-center gap-1 active:opacity-85"
+                    >
+                      <Ionicons name="flash" size={12} color="#FFFFFF" />
+                      <Text className="text-xs font-bold text-white">
+                        Live Demo
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+
+                {/* 3. Storyboard Scenes with Cleaned-up Chips */}
                 {STORYBOARD_SCENES.map((scene) => (
                   <View
                     key={scene.step}
-                    className="bg-[#F4F4F5] rounded-2xl p-4 gap-2"
+                    className="bg-[#F4F4F5] rounded-2xl p-4 gap-2.5"
                   >
+                    {/* Clean Top Row: Step Number + Tag Chip */}
                     <View className="flex-row items-center justify-between">
                       <View className="flex-row items-center gap-2">
-                        <View className="w-7 h-7 rounded-lg bg-[#09090B] items-center justify-center">
-                          <Text className="text-xs font-bold text-white">
+                        <View className="w-6 h-6 rounded-md bg-[#09090B] items-center justify-center">
+                          <Text className="text-[11px] font-black text-white">
                             {scene.step}
                           </Text>
                         </View>
-                        <Text className="text-sm font-bold text-[#09090B]">
-                          {scene.title}
-                        </Text>
+                        <View className="bg-white px-2.5 py-0.5 rounded-full border border-black/5">
+                          <Text
+                            style={{ color: brandConfig.theme.primary }}
+                            className="text-[10px] font-extrabold uppercase tracking-wide"
+                          >
+                            {scene.badge}
+                          </Text>
+                        </View>
                       </View>
-                      <View className="bg-white px-2.5 py-1 rounded-full">
-                        <Text className="text-[10px] font-bold text-[#09090B]">
-                          {scene.badge}
-                        </Text>
-                      </View>
+
+                      <Ionicons
+                        name={scene.icon}
+                        size={16}
+                        color="#71717A"
+                      />
                     </View>
+
+                    {/* Full-width Title (Zero Wrapping or Squishing) */}
+                    <Text className="text-[15px] font-bold text-[#09090B] tracking-tight">
+                      {scene.title}
+                    </Text>
 
                     <Text className="text-xs text-[#52525B] leading-4">
                       {scene.summary}
                     </Text>
 
-                    <View className="gap-1 pt-1">
+                    <View className="gap-1.5 pt-1">
                       {scene.bullets.map((b) => (
                         <View
                           key={b}
@@ -415,7 +486,7 @@ export function OnboardingWizardModal({
                         setActiveRole(scene.targetRole);
                         onClose();
                       }}
-                      className="mt-1 bg-white py-2.5 px-3.5 rounded-xl flex-row items-center justify-between"
+                      className="mt-1 bg-white py-2.5 px-3.5 rounded-xl flex-row items-center justify-between active:opacity-80"
                     >
                       <Text className="text-xs font-bold text-[#09090B]">
                         {scene.cta}
